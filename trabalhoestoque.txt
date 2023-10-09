@@ -1,0 +1,177 @@
+-------------------------------------------------------------------------------------------------------------------
+models.py (exemplo)
+from django.db import models
+
+class ItemEstoque(models.Model):
+    nome = models.CharField(max_length=255)
+    descricao = models.TextField()
+    quantidade_disponivel = models.IntegerField()
+
+    def __str__(self):
+        return self.nome
+
+-------------------------------------------------------------------------------------------------------------------
+views.py (exemplo)
+from django.shortcuts import render, get_object_or_404, redirect
+from .models import ItemEstoque
+from .forms import ItemEstoqueForm
+
+def lista_estoque(request):
+    itens = ItemEstoque.objects.all()
+    return render(request, 'estoque/lista_estoque.html', {'itens': itens})
+
+def adicionar_item(request):
+    if request.method == 'POST':
+        form = ItemEstoqueForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('lista_estoque')
+    else:
+        form = ItemEstoqueForm()
+    return render(request, 'estoque/adicionar_item.html', {'form': form})
+
+def detalhes_item(request, id):
+    item = get_object_or_404(ItemEstoque, id=id)
+    return render(request, 'estoque/detalhes_item.html', {'item': item})
+
+def editar_item(request, id):
+    item = get_object_or_404(ItemEstoque, id=id)
+    if request.method == 'POST':
+        form = ItemEstoqueForm(request.POST, instance=item)
+        if form.is_valid():
+            form.save()
+            return redirect('lista_estoque')
+    else:
+        form = ItemEstoqueForm(instance=item)
+    return render(request, 'estoque/editar_item.html', {'form': form, 'item': item})
+
+def confirmar_exclusao(request, id):
+    item = get_object_or_404(ItemEstoque, id=id)
+    if request.method == 'POST':
+        item.delete()
+        return redirect('lista_estoque')
+    return render(request, 'estoque/confirmar_exclusao.html', {'item': item})
+
+-------------------------------------------------------------------------------------------------------------------
+lista_estoque.html (exemplo)
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lista de Itens em Estoque</title>
+</head>
+<body>
+    <h1>Lista de Itens em Estoque</h1>
+    <ul>
+        {% for item in itens %}
+            <li>{{ item.nome }} - {{ item.descricao }} - {{ item.quantidade_disponivel }}</li>
+        {% endfor %}
+    </ul>
+    <a href="{% url 'adicionar_item' %}">Adicionar Novo Item</a>
+</body>
+</html>
+
+-------------------------------------------------------------------------------------------------------------------
+forms.py (exemplo)
+from django import forms
+from .models import ItemEstoque
+
+class ItemEstoqueForm(forms.ModelForm):
+    class Meta:
+        model = ItemEstoque
+        fields = ['nome', 'descricao', 'quantidade_disponivel']
+
+-------------------------------------------------------------------------------------------------------------------
+urls.py (exemplo)
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.lista_estoque, name='lista_estoque'),
+    path('adicionar/', views.adicionar_item, name='adicionar_item'),
+    path('<int:id>/', views.detalhes_item, name='detalhes_item'),
+    path('<int:id>/editar/', views.editar_item, name='editar_item'),
+    path('<int:id>/excluir/', views.confirmar_exclusao, name='confirmar_exclusao'),
+]
+
+-------------------------------------------------------------------------------------------------------------------
+adicionar_item.html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Adicionar Item ao Estoque</title>
+</head>
+<body>
+    <h1>Adicionar Item ao Estoque</h1>
+    <form action="{% url 'adicionar_item' %}" method="post">
+        {% csrf_token %}
+        <label for="nome">Nome:</label>
+        <input type="text" id="nome" name="nome" required><br>
+
+        <label for="descricao">Descrição:</label><br>
+        <textarea id="descricao" name="descricao" rows="4" cols="50" required></textarea><br>
+
+        <label for="quantidade">Quantidade Disponível:</label>
+        <input type="number" id="quantidade" name="quantidade" required><br>
+
+        <input type="submit" value="Adicionar">
+    </form>
+</body>
+</html>
+
+-------------------------------------------------------------------------------------------------------------------
+detalhes_item.html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Detalhes do Item</title>
+</head>
+<body>
+    <h1>Detalhes do Item</h1>
+    <p><strong>Nome:</strong> {{ item.nome }}</p>
+    <p><strong>Descrição:</strong> {{ item.descricao }}</p>
+    <p><strong>Quantidade Disponível:</strong> {{ item.quantidade_disponivel }}</p>
+    <a href="{% url 'editar_item' item.id %}">Editar</a>
+    <a href="{% url 'confirmar_exclusao' item.id %}">Excluir</a>
+</body>
+</html>
+
+-------------------------------------------------------------------------------------------------------------------
+editar_item.html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Editar Item do Estoque</title>
+</head>
+<body>
+    <h1>Editar Item do Estoque</h1>
+    <form action="{% url 'editar_item' item.id %}" method="post">
+        {% csrf_token %}
+        <label for="nome">Nome:</label>
+        <input type="text" id="nome" name="nome" value="{{ item.nome }}" required><br>
+
+        <label for="descricao">Descrição:</label><br>
+        <textarea id="descricao" name="descricao" rows="4" cols="50" required>{{ item.descricao }}</textarea><br>
+
+        <label for="quantidade">Quantidade Disponível:</label>
+        <input type="number" id="quantidade" name="quantidade" value="{{ item.quantidade_disponivel }}" required><br>
+
+        <input type="submit" value="Salvar Alterações">
+    </form>
+</body>
+</html>
+
+-------------------------------------------------------------------------------------------------------------------
+confirmar_exclusao.html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Confirmar Exclusão</title>
+</head>
+<body>
+    <h1>Confirmar Exclusão</h1>
+    <p>Tem certeza de que deseja excluir o item? Esta ação não pode ser desfeita.</p>
+    <a href="{% url 'excluir_item' item.id %}">Confirmar Exclusão</a>
+    <a href="{% url 'lista_itens' %}">Cancelar</a>
+</body>
+</html>
+
